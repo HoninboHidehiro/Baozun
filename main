@@ -1,0 +1,49 @@
+% 初始化参数
+n = 1600; % 订单数量
+m = 40;   % 背包数量
+K = 5;    % SKU种类数
+q = randi([0, 1], K, n); % 订单i是否包含物品k
+
+% 决策变量数量
+numVars = n * m;
+
+% 目标函数系数
+f = zeros(numVars, 1);
+for j = 1:m
+    for i = 1:n
+        idx = (j-1) * n + i;
+        % 计算每个背包j的价值
+        f(idx) = sum(q(:, i)); % q_ki*x_ij，因为x_ij是决策变量
+    end
+end
+
+% 约束条件
+Aeq = zeros(n + m, numVars); % 等式约束矩阵
+beq = zeros(n + m, 1);       % 等式约束向量
+
+% 每个订单只能被分配到一个背包中
+for i = 1:n
+    Aeq(i, (i:n:numVars)) = 1;
+    beq(i) = 1;
+end
+
+% 每个背包应分配相等数量的订单
+orders_per_bag = n / m;
+for j = 1:m
+    Aeq(n + j, (n * (j - 1) + 1):(n * j)) = 1;
+    beq(n + j) = orders_per_bag;
+end
+
+% 定义整数变量类型
+intcon = 1:numVars;
+
+% 定义边界
+lb = zeros(numVars, 1);
+ub = ones(numVars, 1);
+
+% 解决问题
+opts = optimoptions('intlinprog','Display','iter');
+[x, fval] = intlinprog(f, intcon, [], [], Aeq, beq, lb, ub, opts);
+
+% 打印结果
+fprintf('最小化总价值: %f\n', fval);
